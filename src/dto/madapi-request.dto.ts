@@ -66,7 +66,7 @@ export class MadApiRequestDto {
     @IsString()
     idIssuePlace: string;
 
-    @IsDefined()
+    @IsOptional()
     @IsDate()
     visaExpiryDate: Date;
 
@@ -128,8 +128,7 @@ export class MadApiRequestDto {
     phonePreferred: boolean;
 
     @IsOptional()
-    @IsString()
-    productMomoStatus: string;
+    productMomoStatus: boolean;
 
     @IsOptional()
     @IsString()
