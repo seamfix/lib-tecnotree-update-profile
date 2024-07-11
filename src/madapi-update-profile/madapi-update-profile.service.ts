@@ -5,16 +5,18 @@ import moment from 'moment';
 import { ObjectId } from 'mongoose';
 import * as R from 'ramda';
 import { json2xml, xml2json } from 'xml-js';
-import { RequestDto } from '../dto/request.dto';
+import { MadApiRequestDto } from '../dto/madapi-request.dto';
 import { ResponseDto } from '../dto/response.dto';
 import IResponse from '../interfaces/response.interface';
 import { ITransformRequest } from '../interfaces/transform-request.interface';
-import { IUpdateProfile } from '../interfaces/update-profile.interface';
+import { IMadApiUpdateProfile } from '../interfaces/madapi-update-profile.interface';
 import { IValidatorResponse } from '../interfaces/validator-response.interface';
 import { IApiLog } from '../interfaces/api-log.interface';
 import { Gender, GenderValue, ResponseCode, ResponseMessage } from '../enum/common.enum';
+import { DEFAULT_VALUES, REQUEST_TYPE } from '../constant/common';
+import { generateMadApiAuthToken, postRequest } from '../utils/utils';
 
-export class MadApiUpdateProfileService implements IUpdateProfile {
+export class MadApiUpdateProfileService implements IMadApiUpdateProfile {
 
     private apiLog: any;
 
@@ -22,7 +24,7 @@ export class MadApiUpdateProfileService implements IUpdateProfile {
         this.apiLog = externalApiLogModel
     }
 
-    async transformRequestDTO(dto: RequestDto): Promise<ITransformRequest> {
+    async transformRequestDTO(dto: MadApiRequestDto): Promise<ITransformRequest> {
         const transformRequestDTOResponse: ITransformRequest = {
             isTransformed: false,
         }
@@ -36,216 +38,179 @@ export class MadApiUpdateProfileService implements IUpdateProfile {
             }
 
             const payload = {
-                "soapenv:Envelope": {
-                    "_attributes": {
-                        "xmlns:soapenv": "http://schemas.xmlsoap.org/soap/envelope/",
-                        "xmlns:com": "http://schema.concierge.com"
-                    },
-                    "soapenv:Header": {
-                        "_attributes": {
-                            "xmlns:auth": "http://schemas.eia.org/middleware/AuthInfo"
-                        },
-                        "auth:authentication": {
-                            "auth:user": {
-                                "_text": dto.authUser
-                            },
-                            "auth:password": {
-                                "_text": dto.authPassword
-                            },
-                            "auth:type": {
-                                "_text": dto.authType
+                body: null
+            };
+
+            payload.body = {
+                "@type": "PrepaidRegistrationRequest",
+                status: "captured",
+                interactionItem: [
+                    {
+                        item: {
+                            "@referredType": "Customer",
+                            "@baseType": "PartyRole",
+                            "@type": "Customer",
+                            name: dto.firstName,
+                            customerType: "Individual",
+                            engagedParty:
+                            {
+                                contactMedium: [
+                                    {
+                                        medium: {
+                                            addressLine1: dto.addressLine1,
+                                            addressLine2: dto.addressLine2,
+                                            addressLine3: "",
+                                            addressLine4: "",
+                                            streetName: dto.street,
+                                            city: dto.city,
+                                            stateOrProvince: dto.state,
+                                            country: dto.country,
+                                            postcode: dto.postalCode,
+                                            type: "POBox"
+                                        },
+                                        type: "Address",
+                                        role: dto.addressType
+                                    },
+                                    {
+                                        medium: {
+                                            number: dto.msisdn,
+                                            type: "mobile"
+                                        },
+                                        type: "Phone",
+                                        preferred: dto.phonePreferred
+                                    },
+                                    {
+                                        medium: {
+                                            number: dto.alternateNo,
+                                            type: "telephone"
+                                        },
+                                        type: "Phone",
+                                        preferred: dto.alternateNoPreferred
+                                    },
+                                    {
+                                        medium: {
+                                            emailAddress: dto.emailAddress,
+                                            type: "emailAddress"
+                                        },
+                                        type: "EmailAddress",
+                                        preferred: dto.emailPreferred
+                                    }
+                                ],
+                                "@type": "Individual",
+                                givenName: dto.firstName,
+                                middleName: dto.middleName,
+                                familyName: dto.lastName,
+                                individualIdentification: [
+                                    {
+                                        placeOfIssue: dto.idIssuePlace,
+                                        issuingDate: dto.idIssueDate,
+                                        expiryDate: dto.idExpiryDate,
+                                        visaExpiryDate: dto.visaExpiryDate,
+                                        documentPurpose: "POID",
+                                        type: dto.idType,
+                                        identificationId: dto.idNumber
+                                    }
+                                ],
+                                birthDate: "2003-03-10T00:00:00.000Z",
+                                nationality: "SouthSudan"
                             }
                         }
                     },
-                    "soapenv:Body": {
-                        "com:clientRequest": {
-                            "EaiEnvelope": {
-                                "_attributes": {
-                                    "xmlns": "http://schema.concierge.com/Envelope",
-                                    "xmlns:ser": "http://schema.concierge.com/Services"
-                                },
-                                "ApplicationName": {
-                                    "_text": "MTNCI"
-                                },
-                                "Domain": {
-                                    "_text": "abl_portal"
-                                },
-                                "Service": {
-                                    "_text": "IRMService"
-                                },
-                                "Language": {
-                                    "_text": "En"
-                                },
-                                "UserId": {
-                                    "_text": dto.clientUserId
-                                },
-                                "Sender": {
-                                    "_text": dto.sender
-                                },
-                                "MessageId": {
-                                    "_text": dto.messageId
-                                },
-                                "Payload": {
-                                    "ser:Services": {
-                                        "ser:Request": {
-                                            "ser:Operation_Name": {
-                                                "_text": "UpdateProfile"
-                                            },
-                                            "ser:Subscriber_Type": {
-                                                "_text": "individual"
-                                            },
-                                            "ser:ChangeServicesRequest": {
-                                                "ser:request": {
-                                                    "EVENT": {
-                                                        "REQUEST": {
-                                                           "_attributes": {
-                                                                "CLIENT_ID": "MTNCI",
-                                                                "ENTITY_ID": dto.msisdn,
-                                                                "EXTERNAL_APPLICATION": dto.externalApplication,
-                                                                "EXTERNAL_SYSTEMS_LOG_REFERNCE": dto.externalLogReference,
-                                                                "EXTERNAL_USER": dto.externalUser,
-                                                                "INFO_LEVEL": dto.infoLevel,
-                                                                "OPERATION_NAME": "updateSubscriber",
-                                                                "SERVICE_CODE": dto.serviceCode
-                                                            }
-                                                        },
-                                                        "REQUESTDETAILS": {
-                                                            "_attributes": {
-                                                                "AGENT_NAME": dto.agentName,
-                                                                "DATE_OF_BIRTH": this.getDateByFormate(dto.dob, 'YYYYMMDD'),
-                                                                "DOCUMENTID_NUMBER": dto.idNumber,
-                                                                "DOCUMENTID_TYPE": dto.idType,
-                                                                "DOCUMENT_EXPIRY_DATE": this.getDateByFormate(dto.idExpiryDate, 'YYYYMMDD'),
-                                                                "DOCUMENT_ISSUE_DATE": this.getDateByFormate(dto.idIssueDate, 'YYYYMMDD'),
-                                                                "DOCUMENT_ISSUE_PLACE": dto.idIssuePlace,
-                                                                "FIRST_NAME": dto.firstName,
-                                                                "GENDER": this.getGender(dto.gender) ,
-                                                                "LAST_NAME": dto.lastName,
-                                                                "MOBILE_MONEY": dto.isMobileMoney,
-                                                                "NATIONALITY": dto.nationality,
-                                                                "OCCUPATION": dto.occupation,
-                                                                "ORGANIZATION": dto.organization,
-                                                                "SIM_NUMBER": dto.simNumber
-                                                            }
-                                                        },
-                                                        "ADDRESS": {
-                                                            "PHYSICAL_ADDRESS": {
-                                                                "_attributes": {
-                                                                    "ADDRESS1": dto.fullAddress,
-                                                                    "ADDRESS2": '',
-                                                                    "ADDRESS3": '',
-                                                                    "ADDRESS4": '',
-                                                                    "ADDRESS_TYPE": dto.addressType,
-                                                                    "CITY": dto.city,
-                                                                    "POBOX": '',
-                                                                }
-                                                            }
-                                                        },
-                                                        "DOCUMENTS": {},
-                                                        "BILLDETAILS": {
-                                                            "BILL_PREFERENCE": {
-                                                                "_attributes": {
-                                                                    "BILL_BY_EMAIL": dto.billByEmail,
-                                                                    "BILL_BY_FAX": dto.billByFax,
-                                                                    "BILL_BY_POST": dto.billByPost,
-                                                                    "BILL_BY_SMS": dto.billBySms,
-                                                                    "EMAIL1": dto.billEmail1,
-                                                                    "EMAIL2": dto.billEmail2,
-                                                                    "PREFFERED_CURRENCY": dto.preferredCurrency,
-                                                                    "PRESENTATION_LANGUAGE": dto.presentLanguage
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                    {
+                        item: {
+                            "@type": "StarterPack",
+                            id: dto.verificationRespValue
+                        }
+                    },
+                    {
+                        item: {
+                            "@type": "ProductOrder",
+                            orderItem: [{
+                                action: "add",
+                                orderItem: []
+                            }]
+                        }
+                    },
+                    {
+                        item: {
+                            "@type": "Product",
+                            customFields: {
+                                momoFlag: dto.productMomoStatus
+                            }
+                        }
+                    },
+                    {
+                        item: {
+                            lifecycleState: dto.docUploadStatus,
+                            "@type": "Document",
+                            documentSpecification: {
+                                id: "POID"
                             }
                         }
                     }
-                }
-            };
+                ],
+                channel: [
+                    {
+                        id: dto.channelId,
+                        name: dto.channelName,
+                        role: dto.channelRole,
+                        "@referredType": dto.channelReferredType,
+                        "@type": dto.channelType
+                    }
+                ]
+            }
 
-            const options = { compact: true, ignoreComment: true, spaces: 4 };
-            const xmlResult = json2xml(JSON.stringify(payload), options);
+            if (!payload.body) {
+                transformRequestDTOResponse.isTransformed = false;
+                transformRequestDTOResponse.msg = `Generated param object does not have enough values to make a request`;
+                return transformRequestDTOResponse;
+            }
+
             transformRequestDTOResponse.isTransformed = true;
-            transformRequestDTOResponse.transformedObj = xmlResult;
+            transformRequestDTOResponse.transformedObj = payload;
             return transformRequestDTOResponse;
         } catch (error: any) {
-            console.log(`something wrong while transform Request DTO. ERROR : ${JSON.stringify(error)}`);
+            console.log(`Something went wrong while transforming Request DTO. ERROR : ${JSON.stringify(error)}`);
             transformRequestDTOResponse.isTransformed = false;
             transformRequestDTOResponse.msg = error.message;
             return transformRequestDTOResponse;
         }
     }
 
-    transformResponseDTO(responsePayload: string): ResponseDto {
-        const json = xml2json(responsePayload, { compact: true });
-        const parsedJSON = JSON.parse(json);
+    transformResponseDTO(responsePayload: any): ResponseDto {
+        const transformResponse: ResponseDto = {
+            code: DEFAULT_VALUES.FAILED_CODE,
+            message: "Error transforming response",
+            payload: null,
+        };
 
-        const code = R.pathOr(
-            0,
-            [
-                'soapenv:Envelope',
-                'soapenv:Body',
-                'com:clientRequestResponse',
-                'EaiEnvelope',
-                'Payload',
-                'ser:Services',
-                'ser:response',
-                'ser:ResponseCode',
-                '_text'
-            ],
-            parsedJSON
-        );
+        try {
+            if (!responsePayload || responsePayload['error']) {
+                transformResponse.code = -1;
+                transformResponse.message = responsePayload ? 'Unable to transform response' : responsePayload['error'];
+                return transformResponse;
+            }
+        } catch (error) {
+            transformResponse.message = `Error while transforming Response Payload. Error: ${error}`;
+            return transformResponse;
+        }
 
-        const message = R.pathOr(
-            '',
-            [
-                'soapenv:Envelope',
-                'soapenv:Body',
-                'com:clientRequestResponse',
-                'EaiEnvelope',
-                'Payload',
-                'ser:Services',
-                'ser:response',
-                'ser:ResponseMessage',
-                '_text'
-            ],
-            parsedJSON
-        );
-
-        const payload = this.simplifyJSON(R.pathOr(
-            null,
-            [
-                'soapenv:Envelope',
-                'soapenv:Body',
-                'com:clientRequestResponse',
-                'EaiEnvelope',
-                'Payload',
-                'ser:Services',
-                'ser:response',
-                'EVENT',
-            ],
-            parsedJSON
-        ))
+        const responseData = responsePayload["data"];
 
         const responseJson: ResponseDto = {
-            code,
-            message,
-            payload,
+            code: DEFAULT_VALUES.SUCCESS_CODE,
+            message: responsePayload["resultDescription"],
+            payload: responseData,
         }
         return responseJson;
     }
 
-    async saveRequestPayload(uniqueId: string, requestPayload: any, request: RequestDto) {
+    async saveRequestPayload(requestPayload: any, dto: MadApiRequestDto, requestType: string) {
         try {
             const payload: IApiLog = {
-                uniqueId: uniqueId,
-                msisdn: request.msisdn,
-                requestType: 'TT Update Profile',
+                uniqueId: dto.uniqueId,
+                msisdn: dto.msisdn,
+                requestType: requestType,
                 startTime: new Date(),
                 tpRequestPayload: JSON.stringify(requestPayload)
             }
@@ -255,7 +220,7 @@ export class MadApiUpdateProfileService implements IUpdateProfile {
             const jsonDocument = await createApiRequestLog.save();
             return jsonDocument;
         } catch (error) {
-            console.log(`Something wrong while adding request payload to DB. ${JSON.stringify(error)}`);
+            console.log(`Something went wrong while adding request payload to DB. ${JSON.stringify(error)}`);
             return null;
         }
     }
@@ -278,12 +243,12 @@ export class MadApiUpdateProfileService implements IUpdateProfile {
 			}
 			return false;
 		} catch (error) {
-            console.log(`Something wrong while adding request payload to DB. ERROR: ${JSON.stringify(error)}`);
+            console.log(`Something went wrong while adding response payload to DB. ERROR: ${JSON.stringify(error)}`);
 			return false;
 		}
 	}
 
-    async integration(request: RequestDto) {
+    async integration(request: MadApiRequestDto) {
         const requestPayload = await this.transformRequestDTO(request);
         if (!requestPayload.isTransformed) {
             const response: IResponse = {
@@ -294,52 +259,50 @@ export class MadApiUpdateProfileService implements IUpdateProfile {
             return response;
         }
 
-        const requestUrl = request.apiUrl;
-        const jsonDocument = await this.saveRequestPayload(request.uniqueId, requestPayload, request);
+        let token = null;
 
-        const soapHeaders = {
-            'Content-Type': 'text/xml;charset=UTF-8',
-            'SOAPAction': 'http://www.openuri.org/clientRequest'
-        };
+        const authTokenResponse = await this.generateAuthToken(request);
 
-        try {
-            const body = await this.soapApiRequest(requestUrl, soapHeaders, requestPayload.transformedObj);
-            const transResponseDto = this.transformResponseDTO(body);
-            if (jsonDocument) {
-				await this.saveResponsePayload(jsonDocument._id, transResponseDto);
-			}
-            const integrationResponse: IResponse = {
-                status: transResponseDto.message == ResponseMessage.COMPLETED ? ResponseCode.SUCCESS : ResponseCode.FAILED,
-                msg: transResponseDto.message,
-                payload: transResponseDto.payload
-            }
-            return integrationResponse;
-        } catch (error: any) {
-            console.log(`something wrong while calling Soap API. ERROR: ${JSON.stringify(error)}`);
-			const transResponseDto = {
-				error: error
-			};
-            if (jsonDocument) {
-				await this.saveResponsePayload(jsonDocument._id, transResponseDto);
-			}
-			const response: IResponse = {
-				status: -1,
-				msg: error.message,
-				payload: null
-			}
-			return response;
+        if (authTokenResponse.status === 0 && authTokenResponse.payload) {
+            token = authTokenResponse.payload;
+        } else {
+            return authTokenResponse;
         }
 
-    }
+        const jsonDocument: any = await this.saveRequestPayload(
+            requestPayload,
+            request,
+            REQUEST_TYPE.MAD_API_UPDATE_PROFILE
+        );
 
-    async soapApiRequest(url: string, headers: any, requestBody: any) {
-        const { response } = await soapRequest({
-            url: url,
-            headers,
-            xml: requestBody,
-        });
-        const { body } = response;
-        return body;
+        let verificationResponse = null;
+
+        const verificationApiResponse = await this.callUpdateProfileApi(
+            request,
+            requestPayload.transformedObj,
+            token
+        );
+
+        if (verificationApiResponse.status === 0 && verificationApiResponse.payload) {
+            verificationResponse = verificationApiResponse.payload;
+        } else {
+            return verificationApiResponse;
+        }
+
+        if (jsonDocument) {
+            await this.saveResponsePayload(jsonDocument._id, verificationResponse);
+        }
+
+        const transResponseDto = this.transformResponseDTO( verificationResponse );
+
+        const integrationResponse: IResponse = {
+            status: transResponseDto.code,
+            msg: transResponseDto.message,
+            payload: transResponseDto.payload,
+        };
+
+        return integrationResponse;
+
     }
 
     calculateDuration(startTime: Date, endTime: Date) {
@@ -348,7 +311,7 @@ export class MadApiUpdateProfileService implements IUpdateProfile {
     }
 
     async dtoValidation(dto: any): Promise<IValidatorResponse> {
-        const userStructureClass = plainToInstance(RequestDto, dto);
+        const userStructureClass = plainToInstance(MadApiRequestDto, dto);
         const errors = await validate(userStructureClass, { skipMissingProperties: true });
         const validateResponse: IValidatorResponse = {
             isValid: true,
@@ -365,45 +328,100 @@ export class MadApiUpdateProfileService implements IUpdateProfile {
     }
 
     getDateByFormate(date: Date, format: string) {
-        if (!date) return '';
+        if (!date) {
+            return '';
+        }
         return moment(date).format(format);
     }
 
-    simplifyJSON(jsonObj: any) {
-		if (typeof jsonObj === 'object') {
-			if (jsonObj instanceof Array) {
-				return jsonObj.map(item => this.simplifyJSON(item));
-			} else {
-				const newObj = {};
-				for (const key in jsonObj) {
-					if (jsonObj.hasOwnProperty(key)) {
-						const value = jsonObj[key];
-						if (typeof value === 'object' && '_text' in value && Object.keys(value).length === 1) {
-							newObj[key] = value['_text'];
-						} else {
-							newObj[key] = this.simplifyJSON(value);
-						}
-					}
-				}
-				return newObj;
-			}
-		} else {
-			return jsonObj;
-		}
-	}
-
     getGender(gender: string): string {
-        if(!gender) {
+        if (!gender) {
             return ''
         } else {
-            if(gender.toLocaleLowerCase() === GenderValue.MALE) {
+            if (gender.toLocaleLowerCase() === GenderValue.MALE) {
                 return Gender.MALE
-            } else if(gender.toLocaleLowerCase() === GenderValue.FEMALE) {
+            } else if (gender.toLocaleLowerCase() === GenderValue.FEMALE) {
                 return Gender.FEMALE
             } else {
                 return ''
             }
         }
 
+    }
+
+    async generateAuthToken(dto: MadApiRequestDto): Promise<IResponse> {
+        const response: IResponse = {
+          status: -1,
+          payload: null,
+          msg: null,
+        };
+
+        const authReqBody = {
+          client_id: dto.authClientId,
+          client_secret: dto.authClientSecret,
+        };
+
+        const jsonDocument: any = await this.saveRequestPayload(
+          authReqBody,
+          dto,
+          REQUEST_TYPE.MAD_API_AUTH_TOKEN
+        );
+
+        const authTokenResponse = await generateMadApiAuthToken(
+          authReqBody,
+          dto.authGrantType,
+          dto.authUrl
+        );
+
+        if (jsonDocument) {
+          await this.saveResponsePayload(jsonDocument._id, authTokenResponse);
+        }
+
+        if (authTokenResponse && authTokenResponse["access_token"]) {
+          response.status = 0;
+          response.payload = authTokenResponse["access_token"];
+          response.msg = null;
+          return response;
+        } else {
+          response.msg = `Error while generating auth token for MADAPI Update Profile`;
+          return response;
+        }
+    }
+
+    async callUpdateProfileApi(dto: MadApiRequestDto, payload: { body: any }, token: string ): Promise<IResponse> {
+        const response: IResponse = {
+          status: -1,
+          payload: null,
+          msg: null,
+        };
+
+        const header = {
+          "x-country-code": dto.countryCode,
+          transactionId: dto.transactionId,
+        };
+
+        const apiResponse = await postRequest(
+            dto.apiUrl,
+            payload.body,
+            token,
+            header,
+            null
+        );
+
+        if (apiResponse && apiResponse.data?.error) {
+            response.status = -1;
+            response.payload = apiResponse.data.error;
+            return response;
+        }
+
+        if (apiResponse && apiResponse.data?.id) {
+            response.status = 0;
+            response.payload = apiResponse.data;
+            return response;
+        }
+
+        response.status = -1;
+        response.payload = "Error reaching third party for submission";
+        return response;
     }
 }

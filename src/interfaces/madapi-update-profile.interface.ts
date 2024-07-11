@@ -6,9 +6,9 @@ export interface IMadApiUpdateProfile {
 
 	transformRequestDTO(dto: MadApiRequestDto): unknown;
 
-	transformResponseDTO(responsePayload: unknown): ResponseDto;
+	transformResponseDTO(responsePayload: any): ResponseDto;
 
-	saveRequestPayload(uniqueId: string, requestPayload: any, request: MadApiRequestDto);
+	saveRequestPayload(requestPayload: any, dto: MadApiRequestDto, requestType: string);
 
 	saveResponsePayload(responsePayload: any, uniqueId: string, documentId: ObjectId);
 
