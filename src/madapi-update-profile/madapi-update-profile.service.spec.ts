@@ -26,6 +26,8 @@ describe('Change Request service', () => {
 		firstName: 'John',
 		middleName: 'S',
 		lastName: 'Doe',
+		dob: new Date(),
+		nationality: 'IVORIAN',
 		idNumber: 'poid912000097',
 		idType: 'NationalID',
 		idExpiryDate: new Date(),
