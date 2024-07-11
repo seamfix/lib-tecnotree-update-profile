@@ -39,6 +39,14 @@ export class MadApiRequestDto {
     lastName: string;
 
     @IsDefined()
+    @IsDate()
+    dob: Date;
+
+    @IsDefined()
+    @IsString()
+    nationality: string;
+
+    @IsDefined()
     @IsString()
     idNumber: string;
 

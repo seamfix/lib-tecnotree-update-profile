@@ -111,8 +111,8 @@ export class MadApiUpdateProfileService implements IMadApiUpdateProfile {
                                         identificationId: dto.idNumber
                                     }
                                 ],
-                                birthDate: "2003-03-10T00:00:00.000Z",
-                                nationality: "SouthSudan"
+                                birthDate: dto.dob,
+                                nationality: dto.nationality
                             }
                         }
                     },
