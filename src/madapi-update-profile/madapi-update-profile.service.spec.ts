@@ -48,7 +48,7 @@ describe('Change Request service', () => {
 		emailPreferred: false,
 		alternateNoPreferred: false,
 		phonePreferred: true,
-		productMomoStatus: 'true',
+		productMomoStatus: true,
 		channelId: 'isl',
 		channelName: 'ISL',
 		channelRole: 'interaction creation',
