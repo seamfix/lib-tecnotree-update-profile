@@ -187,6 +187,7 @@ describe('Change Request service', () => {
 		expect(result.status).toBe(-1);
 	});
 
+	//TODO to be used only for Engineer test with valid values. Remove all live URLs and valid tokens after test
 	// it ('should return a successful response for update profile', async () => {
 	// 	const serviceObj = new MadApiUpdateProfileService(apiLogModel);
 
@@ -202,7 +203,7 @@ describe('Change Request service', () => {
 	// 		...dto
 	// 	};
 
-	// 	requestPayload.apiUrl = "https://preprod.api.mtn.com/tmf-api/party/v4/individual";
+	// 	requestPayload.apiUrl = "";
 
 	// 	const result = await serviceObj.integration(requestPayload);
 	// 	expect(result.status).toBe(0);
