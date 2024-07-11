@@ -186,12 +186,13 @@ export class MadApiUpdateProfileService implements IMadApiUpdateProfile {
 
         try {
             if (!responsePayload || responsePayload['error']) {
-                transformResponse.code = -1;
-                transformResponse.message = responsePayload ? 'Unable to transform response' : responsePayload['error'];
+                transformResponse.message = responsePayload ? responsePayload['error'] : 'Unable to transform response';
+                transformResponse.payload = responsePayload;
                 return transformResponse;
             }
         } catch (error) {
-            transformResponse.message = `Error while transforming Response Payload. Error: ${error}`;
+            transformResponse.message = `Error while transforming response payload. Error: ${error}`;
+            transformResponse.payload = responsePayload;
             return transformResponse;
         }
 
@@ -236,7 +237,7 @@ export class MadApiUpdateProfileService implements IMadApiUpdateProfile {
 					{
 						endTime: new Date(),
 						duration: this.calculateDuration(model.startTime, new Date()),
-						tpResponsePayload: JSON.stringify(responsePayload)
+						tpResponsePayload: responsePayload ? JSON.stringify(responsePayload) : null
 					}
 				);
 				return true;
@@ -283,14 +284,14 @@ export class MadApiUpdateProfileService implements IMadApiUpdateProfile {
             token
         );
 
+        if (jsonDocument) {
+            await this.saveResponsePayload(jsonDocument._id, verificationApiResponse);
+        }
+
         if (verificationApiResponse.status === 0 && verificationApiResponse.payload) {
             verificationResponse = verificationApiResponse.payload;
         } else {
             return verificationApiResponse;
-        }
-
-        if (jsonDocument) {
-            await this.saveResponsePayload(jsonDocument._id, verificationResponse);
         }
 
         const transResponseDto = this.transformResponseDTO( verificationResponse );
